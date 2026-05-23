@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cricket Scoreboard</title>
+  <link rel="stylesheet" href="scoreboard.css">
+</head>
+<body>
+  <div class="scoreboard" id="box">
+    <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false">Sound</button>
+    <form class="image-override-form" id="imageOverrideForm" autocomplete="off">
+      <div class="image-form-handle" id="imageFormHandle" title="Drag">IMAGE</div>
+      <select id="imageOverrideType" aria-label="Image type">
+        <option value="player">Player</option>
+        <option value="team">Team</option>
+      </select>
+      <input id="imageOverrideName" type="text" placeholder="Name / fkey" aria-label="Name or fkey">
+      <input id="imageOverrideUrl" type="url" placeholder="Image URL" aria-label="Image URL">
+      <button type="submit">Set</button>
+    </form>
+    <div class="event-overlay" id="eventOverlay" aria-live="polite"></div>
+    <div class="moment-overlay" id="momentOverlay" aria-live="polite"></div>
+    <div class="match-end-overlay" id="matchEndOverlay" aria-live="polite"></div>
+
+    <div class="score-header">
+
+      <div class="team-score team-sl">
+        <img id="team1Logo" src="" alt="Team logo">
+        <div class="score-info">
+          <span class="team-name" id="team1">--</span>
+          <span class="score" id="score">--</span>
+          <span class="overs" id="overs">--</span>
+        </div>
+      </div>
+      
+      <div class="over-box">
+        <span class="over-box-label">OVER</span>
+        <strong id="currentOverBox">--</strong>
+      </div>
+      
+      <div class="team-score team-oma">
+        <div class="score-info oma-info">
+          <span class="team-name" id="team2">OMA</span>
+          <span class="bowling-text">BOWLING</span>
+        </div>
+        <img id="team2Logo" src="" alt="Team logo">
+      </div>
+
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">CRR:</span>
+        <span class="stat-value" id="rr">9.93</span>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-label">WIN %:</span>
+        <span class="stat-value win-value" id="winChance">--</span>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-label">TARGET:</span>
+        <span class="stat-value" id="target">--</span>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-label">P'SHIP:</span>
+        <span class="stat-value" id="partnership">3(3)</span>
+      </div>
+
+      <div class="stat-item toss-info">
+        <span id="toss"></span>
+      </div>
+    </div>
+
+    <div class="broadcast-strip" id="broadcastStrip">
+      <div class="equation-card">
+        <span>Equation</span>
+        <strong id="equationText">--</strong>
+      </div>
+      <div class="pressure-card" id="pressureCard">
+        <span>Pressure</span>
+        <strong id="pressureText">--</strong>
+      </div>
+      <div class="win-meter">
+        <span id="winMeterLeft">--</span>
+        <div class="win-track">
+          <div class="win-fill" id="winFill"></div>
+        </div>
+        <span id="winMeterRight">--</span>
+      </div>
+    </div>
+
+    <div class="venue-bar" id="venueBar">--</div>
+
+    <div class="last-wicket">
+      <span class="lw-label">LAST-W:</span>
+      <span class="lw-value" id="lastWicket">--</span>
+    </div>
+
+    <div class="over-by-over" id="overHistory"></div>
+
+    <div class="player-stage" id="playerStage">
+    <div class="player-cards" id="playerCards">
+
+      <div class="player-card batter-card" id="batsman1Card">
+        <div class="player-image">
+          <img id="batsman1Img" class="player-avatar" src=""
+           onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=B1&background=random'"
+          >
+        </div>
+        <div class="player-info">
+          <div class="player-role">
+            <span>BATTER</span>
+            <span class="bat-icon">🏏</span>
+          </div>
+          <div class="strike-state-badge" id="batsman1StrikeState">NON STRIKER</div>
+          <div class="player-name" id="batsman1">--</div>
+          <div class="player-score" id="batsman1Score">--</div>
+        </div>
+      </div>
+
+      <div class="player-card batter-card" id="batsman2Card">
+        <div class="player-image">
+          <img id="batsman2Img" class="player-avatar" src=""
+               onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=B2&background=random'">
+          
+        </div>
+        <div class="player-info">
+          <div class="player-role">
+            <span>BATTER</span>
+            <span class="bat-icon">🏏</span>
+          </div>
+          <div class="strike-state-badge" id="batsman2StrikeState">NON STRIKER</div>
+          <div class="player-name" id="batsman2">--</div>
+          <div class="player-score" id="batsman2Score">--</div>
+        </div>
+      </div>
+
+      <div class="player-card bowler-card">
+        <div class="player-image">
+          <img id="bowlerImg" class="player-avatar bowler-avatar" src=""
+               onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=B&background=ff4444'">
+        </div>
+        <div class="player-info">
+          <div class="player-role bowler-role">
+            <span>BOWLER</span>
+            <span class="ball-icon">🔴</span>
+          </div>
+          <div class="player-name" id="bowler">--</div>
+          <div class="player-score bowler-score" id="bowlerScore">--</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="squad-showcase" id="squadShowcase"></div>
+    </div>
+
+    <div class="player-list" id="playerList"></div>
+
+    <div class="ticker" id="ticker"></div>
+
+  </div>
+
+<script src="app.js"></script>
+
+</body>
+</html>

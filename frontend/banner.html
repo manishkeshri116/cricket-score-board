@@ -1,0 +1,610 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 20px; font-family: sans-serif; }
+  .label { color: #aaa; font-size: 13px; }
+  canvas { display: block; max-width: 100%; border: 2px solid #FFD700; }
+  .btn { background: #FF0000; color: white; border: none; padding: 12px 28px; font-size: 15px; font-weight: 700; border-radius: 8px; cursor: pointer; margin-top: 8px; }
+  .btn:hover { background: #cc0000; }
+</style>
+</head>
+<body>
+<div class="label">Manish Keshri Kitchen — YouTube Banner (2560 × 1440px)</div>
+<canvas id="banner" width="2560" height="1440"></canvas>
+<button class="btn" onclick="downloadBanner()">⬇ Download Banner PNG</button>
+<div class="label">Also saving logo below...</div>
+<canvas id="logo" width="800" height="800"></canvas>
+<button class="btn" onclick="downloadLogo()">⬇ Download Logo PNG</button>
+
+<script>
+function drawBanner() {
+  const c = document.getElementById('banner');
+  const ctx = c.getContext('2d');
+  const W = 2560, H = 1440;
+
+  // === BACKGROUND ===
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#0D0400');
+  bg.addColorStop(0.4, '#2E0C00');
+  bg.addColorStop(0.7, '#3D1200');
+  bg.addColorStop(1, '#0D0400');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Radial glow center
+  const glow = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.45);
+  glow.addColorStop(0, 'rgba(255,100,0,0.18)');
+  glow.addColorStop(1, 'rgba(255,100,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // === GEOMETRIC TILE PATTERN LEFT ===
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  for (let row = 0; row < 12; row++) {
+    for (let col = 0; col < 8; col++) {
+      ctx.save();
+      ctx.translate(col * 80 + 40, row * 130 + 65);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#FFD700' : '#FF6B00';
+      ctx.fillRect(-28, -28, 56, 56);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+
+  // === GEOMETRIC TILE PATTERN RIGHT ===
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  for (let row = 0; row < 12; row++) {
+    for (let col = 0; col < 8; col++) {
+      ctx.save();
+      ctx.translate(W - col * 80 - 40, row * 130 + 65);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#FFD700' : '#FF6B00';
+      ctx.fillRect(-28, -28, 56, 56);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+
+  // === BORDER LINES ===
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(0, 0, W, 12);
+  ctx.fillRect(0, H - 12, W, 12);
+
+  // Left/right vertical accent
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#FF6B00';
+  ctx.fillRect(640, 60, 8, H - 120);
+  ctx.fillRect(W - 648, 60, 8, H - 120);
+  ctx.globalAlpha = 1;
+
+  // === CHEF HAT (left side) ===
+  const hx = 320, hy = 500;
+  ctx.fillStyle = '#FFFEF0';
+  // brim
+  ctx.beginPath();
+  ctx.ellipse(hx, hy + 180, 140, 45, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // body
+  ctx.fillRect(hx - 120, hy + 20, 240, 170);
+  // puff top
+  ctx.beginPath();
+  ctx.ellipse(hx, hy + 20, 100, 80, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // gold band on brim
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.ellipse(hx, hy + 180, 140, 45, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFFEF0';
+  ctx.beginPath();
+  ctx.ellipse(hx, hy + 175, 130, 38, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // === SPOON & FORK (left) ===
+  // Spoon
+  ctx.strokeStyle = '#FF6B00';
+  ctx.lineWidth = 18;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(185, 760);
+  ctx.lineTo(185, 1050);
+  ctx.stroke();
+  ctx.fillStyle = '#FF6B00';
+  ctx.beginPath();
+  ctx.ellipse(185, 720, 42, 55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Fork
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 16;
+  ctx.beginPath();
+  ctx.moveTo(470, 680);
+  ctx.lineTo(470, 1050);
+  ctx.stroke();
+  [450, 465, 480, 495].forEach(x => {
+    ctx.beginPath();
+    ctx.moveTo(x, 680);
+    ctx.lineTo(x, 780);
+    ctx.stroke();
+  });
+
+  // === DECORATIVE MANDALA (right side) ===
+  const mx = W - 340, my = H / 2;
+  for (let i = 0; i < 12; i++) {
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate((i / 12) * Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? '#FF6B00' : '#FFD700';
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(0, -260, 38, 90, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  // inner circle
+  ctx.beginPath();
+  ctx.arc(mx, my, 90, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFD700';
+  ctx.globalAlpha = 0.15;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(mx, my, 90, 0, Math.PI * 2);
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Chili decorations right
+  function drawChili(x, y, angle, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2d6e00';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(0, -55);
+    ctx.quadraticCurveTo(15, -85, 10, -110);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawChili(W - 700, 300, -0.4, '#FF2200');
+  drawChili(W - 600, 1100, 0.3, '#CC3300');
+  drawChili(W - 800, 1000, -0.6, '#FF4400');
+
+  // Leaf herbs
+  function drawLeaf(x, y, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#3a9000';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 20, 55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1a5000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, -55);
+    ctx.lineTo(0, 55);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawLeaf(W - 500, 380, 0.2);
+  drawLeaf(W - 460, 430, -0.3);
+  drawLeaf(W - 520, 460, 0.5);
+
+  // === MAIN TEXT ===
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(255,100,0,0.6)';
+  ctx.shadowBlur = 40;
+
+  // Channel name
+  ctx.font = 'bold 220px Georgia, serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('Manish Keshri', W / 2, H / 2 - 80);
+
+  ctx.shadowBlur = 0;
+
+  // KITCHEN
+  ctx.font = 'bold 130px Georgia, serif';
+  ctx.fillStyle = '#FF6B00';
+  ctx.letterSpacing = '20px';
+  ctx.fillText('K I T C H E N', W / 2, H / 2 + 100);
+
+  // Divider line
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 5;
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 600, H / 2 + 140);
+  ctx.lineTo(W / 2 + 600, H / 2 + 140);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // center dot
+  ctx.fillStyle = '#FF6B00';
+  ctx.beginPath();
+  ctx.arc(W / 2, H / 2 + 140, 18, 0, Math.PI * 2);
+  ctx.fill();
+  [W/2 - 250, W/2 + 250].forEach(x => {
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(x, H/2 + 140, 10, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Tagline
+  ctx.font = '500 72px Georgia, serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.globalAlpha = 0.88;
+  ctx.fillText('स्वाद से भरपूर  •  Authentic Indian Recipes', W / 2, H / 2 + 260);
+  ctx.globalAlpha = 1;
+
+  // Subscribe button
+  const bx = W / 2, by = H / 2 + 400;
+  ctx.fillStyle = '#FF0000';
+  roundRect(ctx, bx - 280, by - 65, 560, 110, 55);
+  ctx.fill();
+  ctx.font = 'bold 62px Arial, sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText('▶  SUBSCRIBE', bx, by + 20);
+
+  // === INDIAN TRICOLOR BOTTOM ===
+  ctx.fillStyle = '#FF9933';
+  ctx.fillRect(0, H - 55, W * 0.333, 43);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(W * 0.333, H - 55, W * 0.334, 43);
+  ctx.fillStyle = '#138808';
+  ctx.fillRect(W * 0.667, H - 55, W * 0.333, 43);
+
+  // Ashoka wheel center
+  ctx.strokeStyle = '#000080';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(W / 2, H - 34, 18, 0, Math.PI * 2);
+  ctx.stroke();
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(W/2 + Math.cos(a)*4, H - 34 + Math.sin(a)*4);
+    ctx.lineTo(W/2 + Math.cos(a)*18, H - 34 + Math.sin(a)*18);
+    ctx.stroke();
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawLogo() {
+  const c = document.getElementById('logo');
+  const ctx = c.getContext('2d');
+  const S = 800;
+
+  // Outer orange circle
+  const bg = ctx.createRadialGradient(S/2, S/2, 0, S/2, S/2, S*0.48);
+  bg.addColorStop(0, '#FF6B00');
+  bg.addColorStop(1, '#C13A00');
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.arc(S/2, S/2, S*0.48, 0, Math.PI*2);
+  ctx.fill();
+
+  // Gold dashed border
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 8;
+  ctx.setLineDash([30, 15]);
+  ctx.beginPath();
+  ctx.arc(S/2, S/2, S*0.46, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Inner cream plate
+  const plate = ctx.createRadialGradient(S/2, S/2 - 30, 0, S/2, S/2, S*0.37);
+  plate.addColorStop(0, '#FFF9EE');
+  plate.addColorStop(1, '#F0E0B8');
+  ctx.fillStyle = plate;
+  ctx.beginPath();
+  ctx.arc(S/2, S/2, S*0.37, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#FF6B00';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(S/2, S/2, S*0.36, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Mandala petals
+  for (let i = 0; i < 8; i++) {
+    ctx.save();
+    ctx.translate(S/2, S/2);
+    ctx.rotate((i / 8) * Math.PI * 2);
+    ctx.fillStyle = '#FF6B00';
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(0, -230, 28, 60, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
+  // Chef hat
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.ellipse(S/2, S/2 - 120, 70, 22, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillRect(S/2 - 60, S/2 - 185, 120, 75);
+  ctx.beginPath();
+  ctx.ellipse(S/2, S/2 - 185, 52, 38, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.ellipse(S/2, S/2 - 120, 70, 22, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#FFFEF0';
+  ctx.beginPath();
+  ctx.ellipse(S/2, S/2 - 124, 62, 16, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Spoon
+  ctx.fillStyle = '#FF6B00';
+  ctx.beginPath();
+  ctx.ellipse(S/2 - 55, S/2 - 30, 20, 28, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#FF6B00';
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(S/2 - 55, S/2 + 0);
+  ctx.lineTo(S/2 - 55, S/2 + 120);
+  ctx.stroke();
+
+  // Fork
+  ctx.strokeStyle = '#C13A00';
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.moveTo(S/2 + 55, S/2 - 60);
+  ctx.lineTo(S/2 + 55, S/2 + 120);
+  ctx.stroke();
+  [S/2+40, S/2+50, S/2+60, S/2+70].forEach(x => {
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(x, S/2 - 60);
+    ctx.lineTo(x, S/2 + 0);
+    ctx.stroke();
+  });
+
+  // Pan arc
+  ctx.strokeStyle = '#8B4513';
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.arc(S/2, S/2 + 130, 70, 0.1, Math.PI - 0.1);
+  ctx.stroke();
+  ctx.strokeStyle = '#8B4513';
+  ctx.beginPath();
+  ctx.moveTo(S/2 - 68, S/2 + 136);
+  ctx.lineTo(S/2 - 90, S/2 + 165);
+  ctx.stroke();
+
+  // Bottom gold ribbon
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.moveTo(S/2 - 200, S/2 + 200);
+  ctx.quadraticCurveTo(S/2, S/2 + 235, S/2 + 200, S/2 + 200);
+  ctx.lineTo(S/2 + 200, S/2 + 240);
+  ctx.quadraticCurveTo(S/2, S/2 + 275, S/2 - 200, S/2 + 240);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 34px Georgia, serif';
+  ctx.fillStyle = '#8B0000';
+  ctx.fillText('MANISH KESHRI', S/2, S/2 + 228);
+
+  // Top arch text
+  ctx.save();
+  ctx.font = 'bold 32px Georgia, serif';
+  ctx.fillStyle = '#8B0000';
+  const r2 = S*0.31;
+  const label = '✦  KITCHEN  ✦';
+  const totalAngle = Math.PI * 0.65;
+  const startAngle = -Math.PI/2 - totalAngle/2;
+  [...label].forEach((ch, i) => {
+    const a = startAngle + (i / (label.length - 1)) * totalAngle;
+    ctx.save();
+    ctx.translate(S/2 + Math.cos(a)*r2, S/2 - 10 + Math.sin(a)*r2);
+    ctx.rotate(a + Math.PI/2);
+    ctx.fillText(ch, 0, 0);
+    ctx.restore();
+  });
+  ctx.restore();
+
+  // Tricolor dots
+  [[S/2-60, '#FF9933'], [S/2, '#FFFFFF'], [S/2+60, '#138808']].forEach(([x, col]) => {
+    ctx.fillStyle = col;
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, S/2 + 290, 12, 0, Math.PI*2);
+    ctx.fill();
+    if (col === '#FFFFFF') ctx.stroke();
+  });
+}
+
+function downloadBanner() {
+  const a = document.createElement('a');
+  a.download = 'ManishKeshriKitchen_Banner_2560x1440.png';
+  a.href = document.getElementById('banner').toDataURL('image/png');
+  a.click();
+}
+
+function downloadLogo() {
+  const a = document.createElement('a');
+  a.download = 'ManishKeshriKitchen_Logo_800x800.png';
+  a.href = document.getElementById('logo').toDataURL('image/png');
+  a.click();
+}
+
+drawBanner();
+drawLogo();
+</script>
+</body>
+</html>
+ -->
+
+ <!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 16px; font-family: sans-serif; }
+  .label { color: #aaa; font-size: 13px; }
+  canvas { display: block; border: 2px solid #FFD700; image-rendering: pixelated; }
+  .btn { background: #FF0000; color: white; border: none; padding: 10px 24px; font-size: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; }
+  .preview { display: flex; gap: 20px; align-items: center; }
+  .preview-label { color: #888; font-size: 11px; text-align: center; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="label">Manish Keshri Kitchen — Watermark (150 × 150 px)</div>
+<div class="preview">
+  <div>
+    <canvas id="wm" width="150" height="150"></canvas>
+    <div class="preview-label">Actual size</div>
+  </div>
+  <div>
+    <canvas id="wm2x" width="300" height="300"></canvas>
+    <div class="preview-label">2× preview</div>
+  </div>
+</div>
+<button class="btn" onclick="dl()">⬇ Download Watermark PNG (150×150)</button>
+
+<script>
+function draw(canvas, S) {
+  const ctx = canvas.getContext('2d');
+  const cx = S/2, cy = S/2, r = S*0.47;
+
+  // Transparent background
+  ctx.clearRect(0, 0, S, S);
+
+  // Outer circle - deep orange
+  ctx.fillStyle = '#C13A00';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fill();
+
+  // Gold ring
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = S*0.035;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r*0.88, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Inner cream circle
+  ctx.fillStyle = '#FFF5E0';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r*0.72, 0, Math.PI*2);
+  ctx.fill();
+
+  // Mini chef hat
+  const hy = cy - r*0.22;
+  ctx.fillStyle = '#FFFFFF';
+  // brim
+  ctx.beginPath();
+  ctx.ellipse(cx, hy + r*0.22, r*0.28, r*0.09, 0, 0, Math.PI*2);
+  ctx.fill();
+  // body
+  ctx.fillRect(cx - r*0.2, hy - r*0.12, r*0.4, r*0.22);
+  // puff
+  ctx.beginPath();
+  ctx.ellipse(cx, hy - r*0.12, r*0.16, r*0.13, 0, 0, Math.PI*2);
+  ctx.fill();
+  // gold brim stripe
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.ellipse(cx, hy + r*0.22, r*0.28, r*0.09, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#FFF5E0';
+  ctx.beginPath();
+  ctx.ellipse(cx, hy + r*0.20, r*0.24, r*0.067, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Spoon
+  ctx.fillStyle = '#FF6B00';
+  ctx.beginPath();
+  ctx.ellipse(cx - r*0.15, cy + r*0.06, r*0.07, r*0.1, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#FF6B00';
+  ctx.lineWidth = S*0.04;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - r*0.15, cy + r*0.16);
+  ctx.lineTo(cx - r*0.15, cy + r*0.46);
+  ctx.stroke();
+
+  // Fork
+  ctx.strokeStyle = '#8B2200';
+  ctx.lineWidth = S*0.032;
+  ctx.beginPath();
+  ctx.moveTo(cx + r*0.15, cy - r*0.04);
+  ctx.lineTo(cx + r*0.15, cy + r*0.46);
+  ctx.stroke();
+  ctx.lineWidth = S*0.025;
+  [-0.06, -0.02, 0.02, 0.06].forEach(dx => {
+    ctx.beginPath();
+    ctx.moveTo(cx + r*0.15 + r*dx, cy - r*0.04);
+    ctx.lineTo(cx + r*0.15 + r*dx, cy + r*0.16);
+    ctx.stroke();
+  });
+
+  // MK initials bottom
+  ctx.fillStyle = '#8B0000';
+  ctx.font = `bold ${S*0.16}px Georgia, serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('MK', cx, cy + r*0.68);
+
+  // small dot accents
+  [cx - r*0.35, cx + r*0.35].forEach(x => {
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(x, cy + r*0.55, S*0.022, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+const c1 = document.getElementById('wm');
+const c2 = document.getElementById('wm2x');
+draw(c1, 150);
+
+// 2x preview
+const ctx2 = c2.getContext('2d');
+ctx2.drawImage(c1, 0, 0, 300, 300);
+
+function dl() {
+  const a = document.createElement('a');
+  a.download = 'ManishKeshriKitchen_Watermark_150x150.png';
+  a.href = c1.toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>
