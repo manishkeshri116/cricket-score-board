@@ -7,11 +7,16 @@ let backgroundMusic = null;
 let backgroundMusicStarted = false;
 let crowdMusic = null;
 let crowdMusicStarted = false;
+let crowdMusicBaseVolume = 0.78;
 let hindiCommentaryStream = null;
 let hindiCommentaryStreamStarted = false;
 let audienceTimer = null;
 let audienceNoise = null;
 let audienceGain = null;
+let audienceChantTimer = null;
+let audienceChantGain = null;
+let crowdDuckTimer = null;
+let crowdSyntheticBaseGain = 0.12;
 let showSquadShowcase = false;
 let showcaseMode = "squad";
 let engagementVariant = 0;
@@ -48,9 +53,30 @@ const teamThemes = [
   { keys: ["gujarat titans", "gt"], primary: "#1c3144", secondary: "#071420", accent: "#d8b46a", score: "#d8f3ff" }
 ];
 
+function normalizeTeamText(value = "") {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 function themeForTeam(name = "", fkey = "") {
-  const haystack = `${name} ${fkey}`.toLowerCase();
-  return teamThemes.find(theme => theme.keys.some(key => haystack.includes(key))) || {
+  const normalizedName = normalizeTeamText(name);
+  const normalizedFkey = normalizeTeamText(fkey);
+  const nameTokens = normalizedName.split(" ").filter(Boolean);
+  const matchesLongName = theme => theme.keys.some(key => {
+    const normalizedKey = normalizeTeamText(key);
+    return normalizedKey.length > 3 && normalizedName.includes(normalizedKey);
+  });
+  const matchesKey = theme => theme.keys.some(key => {
+    const normalizedKey = normalizeTeamText(key);
+    if (!normalizedKey) return false;
+
+    if (normalizedKey.length <= 3) {
+      return normalizedFkey === normalizedKey || nameTokens.includes(normalizedKey);
+    }
+
+    return normalizedName.includes(normalizedKey) || normalizedFkey === normalizedKey;
+  });
+
+  return teamThemes.find(matchesLongName) || teamThemes.find(matchesKey) || {
     primary: "#f4a020",
     secondary: "#12343b",
     accent: "#00ffff",
@@ -61,6 +87,18 @@ function themeForTeam(name = "", fkey = "") {
 function firstImageUrl(value) {
   const list = Array.isArray(value) ? value : [value];
   return list.find(src => src && /^https?:\/\//.test(src)) || "";
+}
+
+function readableTextColor(hex = "#000000") {
+  const clean = String(hex || "").replace("#", "").trim();
+  if (!/^[0-9a-f]{6}$/i.test(clean)) return "#050505";
+  const r = parseInt(clean.slice(0, 2), 16) / 255;
+  const g = parseInt(clean.slice(2, 4), 16) / 255;
+  const b = parseInt(clean.slice(4, 6), 16) / 255;
+  const luminance = [r, g, b].map(value => (
+    value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  )).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+  return luminance > 0.48 ? "#050505" : "#ffffff";
 }
 
 function applyBattingTheme(data) {
@@ -75,8 +113,24 @@ function applyBattingTheme(data) {
     target.style.setProperty("--team-accent", theme.accent);
     target.style.setProperty("--team-score", theme.score);
     target.style.setProperty("--team-glow", `${theme.primary}66`);
+    target.style.setProperty("--team-on-primary", readableTextColor(theme.primary));
+    target.style.setProperty("--team-on-accent", readableTextColor(theme.accent));
     target.style.setProperty("--team-logo", logoUrl ? `url("${logoUrl.replace(/"/g, '\\"')}")` : "none");
   });
+}
+
+function applyBowlingTheme(data) {
+  const bowlerCard = document.querySelector(".bowler-card");
+  if (!bowlerCard) return;
+
+  const theme = themeForTeam(data.bowlingTeam || data.team2 || "", data.bowlingTeamFkey || data.team2Fkey || "");
+  bowlerCard.style.setProperty("--bowler-team-primary", theme.primary);
+  bowlerCard.style.setProperty("--bowler-team-secondary", theme.secondary);
+  bowlerCard.style.setProperty("--bowler-team-accent", theme.accent);
+  bowlerCard.style.setProperty("--bowler-team-score", theme.score);
+  bowlerCard.style.setProperty("--bowler-team-glow", `${theme.primary}66`);
+  bowlerCard.style.setProperty("--bowler-team-on-primary", readableTextColor(theme.primary));
+  bowlerCard.style.setProperty("--bowler-team-on-accent", readableTextColor(theme.accent));
 }
 
 function pickRealFallback(name, type = "player") {
@@ -204,7 +258,9 @@ async function startCrowdMusic() {
 
     crowdMusic = new Audio(config.crowdMusicUrl);
     crowdMusic.loop = true;
-    crowdMusic.volume = config.crowdVolume ?? 0.28;
+    crowdMusicBaseVolume = config.crowdVolume ?? 0.78;
+    crowdMusic.volume = crowdMusicBaseVolume;
+    crowdMusic.crossOrigin = "anonymous";
 
     await crowdMusic.play();
   } catch (error) {
@@ -275,33 +331,122 @@ function startAudienceAmbience() {
   }
 
   audienceNoise = audioCtx.createBufferSource();
+  const upperNoise = audioCtx.createBufferSource();
   const lowpass = audioCtx.createBiquadFilter();
   const highpass = audioCtx.createBiquadFilter();
+  const upperBand = audioCtx.createBiquadFilter();
+  const upperGain = audioCtx.createGain();
+  const crowdMaster = audioCtx.createGain();
+  const crowdCompressor = audioCtx.createDynamicsCompressor();
   audienceGain = audioCtx.createGain();
+  audienceChantGain = audioCtx.createGain();
 
   audienceNoise.buffer = buffer;
   audienceNoise.loop = true;
+  upperNoise.buffer = buffer;
+  upperNoise.loop = true;
   lowpass.type = "lowpass";
-  lowpass.frequency.value = 950;
+  lowpass.frequency.value = 1250;
   highpass.type = "highpass";
-  highpass.frequency.value = 120;
-  audienceGain.gain.value = 0.034;
+  highpass.frequency.value = 90;
+  upperBand.type = "bandpass";
+  upperBand.frequency.value = 2300;
+  upperBand.Q.value = 0.7;
+  upperGain.gain.value = 0.052;
+  crowdMaster.gain.value = 1.55;
+  crowdCompressor.threshold.value = -24;
+  crowdCompressor.knee.value = 18;
+  crowdCompressor.ratio.value = 4;
+  crowdCompressor.attack.value = 0.01;
+  crowdCompressor.release.value = 0.24;
+  audienceGain.gain.value = crowdSyntheticBaseGain;
+  audienceChantGain.gain.value = 0.0001;
 
   audienceNoise
     .connect(highpass)
     .connect(lowpass)
     .connect(audienceGain)
+    .connect(crowdMaster);
+  upperNoise
+    .connect(upperBand)
+    .connect(upperGain)
+    .connect(crowdMaster);
+  crowdMaster
+    .connect(crowdCompressor)
     .connect(audioCtx.destination);
+
+  [164, 196, 246].forEach((freq, index) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.value = freq;
+    gain.gain.value = index === 0 ? 0.015 : 0.009;
+    osc.connect(gain).connect(audienceChantGain).connect(crowdMaster);
+    osc.start();
+  });
+
   audienceNoise.start();
+  upperNoise.start();
 
   audienceTimer = setInterval(() => {
     if (!audienceGain || !audioCtx) return;
     const now = audioCtx.currentTime;
-    const next = 0.026 + Math.random() * 0.024;
+    const next = 0.095 + Math.random() * 0.07;
     audienceGain.gain.cancelScheduledValues(now);
     audienceGain.gain.setValueAtTime(audienceGain.gain.value, now);
     audienceGain.gain.linearRampToValueAtTime(next, now + 0.8);
   }, 900);
+
+  audienceChantTimer = setInterval(() => {
+    if (!audienceChantGain || !audioCtx) return;
+    const now = audioCtx.currentTime;
+    audienceChantGain.gain.cancelScheduledValues(now);
+    audienceChantGain.gain.setValueAtTime(0.0001, now);
+    audienceChantGain.gain.linearRampToValueAtTime(0.072, now + 0.45);
+    audienceChantGain.gain.linearRampToValueAtTime(0.026, now + 1.4);
+    audienceChantGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+  }, 5200 + Math.random() * 1800);
+}
+
+function setMediaVolume(audio, target, duration = 260) {
+  if (!audio) return;
+  const start = audio.volume;
+  const startTime = performance.now();
+  const tick = now => {
+    const progress = Math.min(1, (now - startTime) / duration);
+    audio.volume = start + (target - start) * progress;
+    if (progress < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function duckCrowdForCommentary(duration = 3600) {
+  if (crowdDuckTimer) clearTimeout(crowdDuckTimer);
+  setMediaVolume(crowdMusic, Math.min(0.18, crowdMusicBaseVolume * 0.24), 220);
+  setMediaVolume(backgroundMusic, 0.04, 220);
+
+  if (audienceGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    audienceGain.gain.cancelScheduledValues(now);
+    audienceGain.gain.setValueAtTime(audienceGain.gain.value, now);
+    audienceGain.gain.linearRampToValueAtTime(0.024, now + 0.18);
+  }
+  if (audienceChantGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    audienceChantGain.gain.cancelScheduledValues(now);
+    audienceChantGain.gain.setValueAtTime(Math.min(audienceChantGain.gain.value, 0.006), now);
+  }
+
+  crowdDuckTimer = setTimeout(() => {
+    setMediaVolume(crowdMusic, crowdMusicBaseVolume, 650);
+    setMediaVolume(backgroundMusic, 0.18, 650);
+    if (audienceGain && audioCtx) {
+      const now = audioCtx.currentTime;
+      audienceGain.gain.cancelScheduledValues(now);
+      audienceGain.gain.setValueAtTime(audienceGain.gain.value, now);
+      audienceGain.gain.linearRampToValueAtTime(crowdSyntheticBaseGain, now + 0.65);
+    }
+  }, duration);
 }
 
 function playEventSound(eventName) {
@@ -309,20 +454,23 @@ function playEventSound(eventName) {
 
   if (eventName === "FOUR") {
     [392, 523, 659].forEach((freq, i) => tone(freq, 0.13, i * 0.08, 0.08, "square"));
-    audienceCheer(0.09, 1.2);
+    audienceCheer(0.22, 1.4);
   } else if (eventName === "SIX") {
     [330, 494, 660, 880].forEach((freq, i) => tone(freq, 0.16, i * 0.07, 0.09, "sawtooth"));
-    audienceCheer(0.13, 1.5);
+    audienceCheer(0.34, 2.0);
   } else if (eventName === "WICKET") {
     [220, 165, 110].forEach((freq, i) => tone(freq, 0.22, i * 0.12, 0.09, "triangle"));
-    audienceCheer(0.11, 1.4);
+    audienceCheer(0.38, 2.3);
   } else if (eventName === "RUNOUT") {
     [520, 260, 520, 180].forEach((freq, i) => tone(freq, 0.12, i * 0.08, 0.085, "square"));
-    audienceCheer(0.14, 1.5);
+    audienceCheer(0.3, 1.8);
+  } else if (["LBWCHECK", "RUNOUTCHECK", "DRS"].includes(eventName)) {
+    [620, 620, 420].forEach((freq, i) => tone(freq, 0.1, i * 0.16, 0.075, "square"));
+    audienceCheer(0.18, 1.1);
   } else if (eventName === "WIDE") {
     tone(150, 0.12, 0, 0.08, "square");
     tone(150, 0.12, 0.18, 0.08, "square");
-    audienceCheer(0.045, 0.6);
+    audienceCheer(0.14, 0.8);
   }
 }
 
@@ -437,16 +585,6 @@ function partnershipText(data) {
   return `${runs}(${balls})`;
 }
 
-function shortTossText(value) {
-  const text = String(value || "").trim();
-  if (!text || text === "TOSS: --") return "TOSS: --";
-  const short = text.match(/^(.+?)\s+won\s+toss,\s*(batting|bowling)/i);
-  if (short) return `TOSS: ${short[1].trim()} won, ${short[2].toLowerCase()}`;
-  const match = text.match(/^(.+?)\s+won\s+toss/i) || text.match(/^(.+?)\s+won\s+the\s+toss/i);
-  if (match) return `TOSS: ${match[1].trim()} won`;
-  return text.replace(/^TOSS:\s*/i, "TOSS: ");
-}
-
 function parseWinPercent(value) {
   const match = String(value || "").match(/(\d+(?:\.\d+)?)\s*%/);
   if (!match) return 50;
@@ -500,6 +638,8 @@ function escapeRegExp(value) {
 }
 
 function matchWinnerText(data) {
+  if (data.winnerTeam) return String(data.winnerTeam).trim();
+
   const result = String(data.matchResult || "").trim();
   if (!result || /(?:match\s+tied|no\s+result|abandoned|called\s+off)/i.test(result)) return "";
 
@@ -532,11 +672,15 @@ function matchWinnerText(data) {
   });
   if (chanceWinner) return chanceWinner;
 
-  if (/match\s+closed/i.test(result)) {
+  if (/match\s+closed|match\s+end|match\s+finished|innings\s+over/i.test(result)) {
     const state = chaseState(data);
     if (state.target && state.runsNeeded <= 0) return data.battingTeam || data.team2 || "";
     if (state.target && state.ballsLeft <= 0 && state.runsNeeded > 1) return data.bowlingTeam || data.team1 || "";
   }
+
+  const state = chaseState(data);
+  if (state.target && state.runsNeeded <= 0) return data.battingTeam || data.team2 || "";
+  if (state.target && state.ballsLeft <= 0 && state.runsNeeded > 1) return data.bowlingTeam || data.team1 || "";
 
   if (resultLower.includes("won")) return result.split(/\s+won\b/i)[0].trim();
   return "";
@@ -562,6 +706,60 @@ function runTextHindi(lastRuns) {
   return "";
 }
 
+function cleanCommentaryText(value = "") {
+  return String(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function shortHindiFromCommentary(data) {
+  const raw = cleanCommentaryText(data.commentaryText || "");
+  if (!raw) return "";
+
+  const text = raw
+    .replace(/\b(?:that's|that is|this is)\b/gi, "")
+    .replace(/\b(?:what a|brilliant|excellent|superb|lovely)\b/gi, "")
+    .replace(/\b(?:in the end|at the end of it|as a result)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const lower = text.toLowerCase();
+  const striker = data.lastBatter || data.striker || "बल्लेबाज";
+  const bowler = data.lastBowler || (data.bowlerStats && data.bowlerStats.name) || data.bowler || "गेंदबाज";
+  const scoreLine = `${data.score || ""}, ओवर ${data.over || ""}`;
+  const chase = chaseLine(data);
+  let line = "";
+
+  if (/\bsix\b|maximum|over the rope|into the stands/i.test(text) || data.event === "SIX") {
+    line = `छक्का! ${striker} ने बड़ा शॉट लगाया।`;
+  } else if (/\bfour\b|boundary|finds the fence|to the fence/i.test(text) || data.event === "FOUR") {
+    line = `चौका! ${striker} ने बाउंड्री निकाली।`;
+  } else if (/wicket|bowled|caught|lbw|out\b/i.test(text) || data.event === "WICKET") {
+    line = `विकेट! ${bowler} ने सफलता दिलाई। ${data.lastWicket || ""}`;
+  } else if (/run\s*-?\s*out/i.test(text) || data.event === "RUNOUT") {
+    line = `रन आउट! फील्डिंग ने मौका बना दिया। ${data.lastWicket || ""}`;
+  } else if (/wide/i.test(text) || data.event === "WIDE") {
+    line = `वाइड गेंद। ${bowler} लाइन से भटके।`;
+  } else if (/no\s*ball/i.test(text) || data.event === "NOBALL") {
+    line = `नो बॉल। बल्लेबाजी टीम को अतिरिक्त रन।`;
+  } else if (/review|drs|third umpire|upstairs|checking|lbw check/i.test(text)) {
+    line = `रिव्यू चल रहा है। ${data.reviewPlayer || striker} फैसले के इंतजार में।`;
+  } else if (/\bno run\b|dot ball|defended|leaves it/i.test(lower) || String(data.lastBallRuns) === "0") {
+    line = `डॉट बॉल। ${striker} ने ${bowler} को संभलकर खेला।`;
+  } else {
+    const runText = runTextHindi(data.lastBallRuns);
+    line = runText
+      ? `${runText}। ${striker} ने ${bowler} को खेला।`
+      : text.split(/[.!?]/).find(Boolean) || text;
+  }
+
+  line = line.replace(/\s+/g, " ").trim();
+  if (line.length > 130) line = `${line.slice(0, 127).trim()}...`;
+  return `${line} स्कोर ${scoreLine}। ${chase}`.replace(/\s+/g, " ").trim();
+}
+
 function hindiCommentaryText(data) {
   const eventName = data.event || "";
   const striker = data.lastBatter || data.striker || (data.batsmenStats && data.batsmenStats[0] && data.batsmenStats[0].name) || "बल्लेबाज";
@@ -569,13 +767,18 @@ function hindiCommentaryText(data) {
   const scoreLine = `${data.battingTeam || data.team2 || "टीम"} ${data.score || ""}, ओवर ${data.over || ""}`;
   const lastRuns = String(data.lastBallRuns || "").toUpperCase();
   const chase = chaseLine(data);
+  const commentaryLine = shortHindiFromCommentary(data);
 
   if (data.matchResult) return `मैच खत्म। ${data.matchResult}`;
   if (data.inningsBreak) return `पहली पारी खत्म। इनिंग्स ब्रेक। ${data.inningsBreakText || ""}`;
+  if (commentaryLine) return commentaryLine;
   if (eventName === "FOUR") return `चौका! ${striker} ने गैप ढूंढा और गेंद सीधा बाउंड्री के पार। स्कोर ${scoreLine}। ${chase}`;
   if (eventName === "SIX") return `छक्का! ${striker} ने पूरी ताकत से शॉट लगाया, गेंद सीमा रेखा के बाहर। स्कोर ${scoreLine}। ${chase}`;
   if (eventName === "WICKET") return `विकेट! ${bowler} ने बड़ा झटका दिया। ${data.lastWicket || ""}। स्कोर ${scoreLine}।`;
   if (eventName === "RUNOUT") return `रन आउट! कमाल की फील्डिंग, बल्लेबाज क्रीज से बाहर। ${data.lastWicket || ""}।`;
+  if (eventName === "LBWCHECK") return `एल बी डब्ल्यू चेक चल रहा है। ${data.reviewPlayer || striker} फैसले के इंतजार में। स्कोर ${scoreLine}।`;
+  if (eventName === "RUNOUTCHECK") return `रन आउट चेक तीसरे अंपायर के पास। ${data.reviewPlayer || striker} क्रीज के करीब। स्कोर ${scoreLine}।`;
+  if (eventName === "DRS") return `डी आर एस रिव्यू लिया गया है। ${data.reviewPlayer || striker} पर फैसला आने वाला है। स्कोर ${scoreLine}।`;
   if (eventName === "WIDE") return `वाइड गेंद। ${bowler} लाइन से भटके, बल्लेबाजी टीम को अतिरिक्त रन। स्कोर ${scoreLine}। ${chase}`;
   if (eventName === "NOBALL") return `नो बॉल! बल्लेबाजी टीम को फ्री हिट का मौका मिल सकता है। स्कोर ${scoreLine}। ${chase}`;
 
@@ -598,12 +801,14 @@ function speakHindiCommentary(data) {
 
   lastSpokenCommentary = spokenKey;
   window.speechSynthesis.cancel();
+  duckCrowdForCommentary(Math.max(3200, Math.min(6800, text.length * 55)));
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "hi-IN";
-  utterance.rate = 1.02;
-  utterance.pitch = 1.05;
-  utterance.volume = 0.95;
+  utterance.rate = 0.92;
+  utterance.pitch = 1.0;
+  utterance.volume = 1;
+  utterance.onend = () => duckCrowdForCommentary(900);
   if (hindiVoice) utterance.voice = hindiVoice;
 
   window.speechSynthesis.speak(utterance);
@@ -627,12 +832,15 @@ function triggerEventEffect(eventName) {
     SIX: "SIX",
     WICKET: "WICKET",
     RUNOUT: "RUN OUT",
+    LBWCHECK: "LBW CHECK",
+    RUNOUTCHECK: "RUN OUT CHECK",
+    DRS: "DRS REVIEW",
     WIDE: "WIDE"
   };
 
   if (!labels[eventName]) return;
 
-  box.classList.remove("event-four", "event-six", "event-wicket", "event-runout", "event-wide");
+  box.classList.remove("event-four", "event-six", "event-wicket", "event-runout", "event-lbwcheck", "event-runoutcheck", "event-drs", "event-wide");
   overlay.className = "event-overlay";
   void box.offsetWidth;
 
@@ -684,6 +892,14 @@ function checkBroadcastMoments(data) {
     if (key !== lastMomentKey) {
       lastMomentKey = key;
       showMoment("WICKET", data.lastWicket, "wicket");
+    }
+  }
+
+  if (["LBWCHECK", "RUNOUTCHECK", "DRS"].includes(data.event) && (data.reviewText || data.ticker)) {
+    const key = `review:${data.event}:${data.reviewText || data.ticker}`;
+    if (key !== lastMomentKey) {
+      lastMomentKey = key;
+      showMoment(data.reviewEvent || "REVIEW", data.reviewPlayer || data.reviewText || data.ticker, "review");
     }
   }
 
@@ -1106,6 +1322,7 @@ function renderTicker(data) {
   ticker.innerHTML = "";
   const liveLabel = data.matchResult ? "RESULT" : data.inningsBreak ? "BREAK" : "LIVE";
   addTickerItem(ticker, liveLabel, data.matchResult || data.inningsBreakText || data.ticker || "Match in progress", "ticker-main");
+  if (data.reviewText) addTickerItem(ticker, "REVIEW", data.reviewText);
   if (chaseEquation) addTickerItem(ticker, "CHASE", chaseEquation);
   if (over) addTickerItem(ticker, "OVER", over);
   if (data.lastWicket) addTickerItem(ticker, "LAST WICKET", data.lastWicket);
@@ -1284,93 +1501,13 @@ function updateStrikerIndicator(data, b1, b2) {
 
 document.getElementById("soundToggle").addEventListener("click", initAudio);
 
-function initFloatingImageForm() {
-  const form = document.getElementById("imageOverrideForm");
-  const handle = document.getElementById("imageFormHandle");
-  const saved = JSON.parse(localStorage.getItem("imageFormPosition") || "null");
-
-  if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-    form.style.left = `${Math.min(saved.x, window.innerWidth - 80)}px`;
-    form.style.top = `${Math.min(saved.y, window.innerHeight - 40)}px`;
-    form.style.right = "auto";
-  }
-
-  let drag = null;
-
-  handle.addEventListener("pointerdown", event => {
-    const rect = form.getBoundingClientRect();
-    drag = {
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top
-    };
-    handle.setPointerCapture(event.pointerId);
-    form.classList.add("dragging");
-  });
-
-  handle.addEventListener("pointermove", event => {
-    if (!drag) return;
-    const maxX = window.innerWidth - form.offsetWidth - 6;
-    const maxY = window.innerHeight - form.offsetHeight - 6;
-    const x = Math.max(6, Math.min(event.clientX - drag.offsetX, maxX));
-    const y = Math.max(6, Math.min(event.clientY - drag.offsetY, maxY));
-
-    form.style.left = `${x}px`;
-    form.style.top = `${y}px`;
-    form.style.right = "auto";
-  });
-
-  const stopDrag = () => {
-    if (!drag) return;
-    drag = null;
-    form.classList.remove("dragging");
-    localStorage.setItem("imageFormPosition", JSON.stringify({
-      x: form.offsetLeft,
-      y: form.offsetTop
-    }));
-  };
-
-  handle.addEventListener("pointerup", stopDrag);
-  handle.addEventListener("pointercancel", stopDrag);
-}
-
-initFloatingImageForm();
-
-document.getElementById("imageOverrideForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  const type = document.getElementById("imageOverrideType").value;
-  const nameInput = document.getElementById("imageOverrideName");
-  const urlInput = document.getElementById("imageOverrideUrl");
-  const name = nameInput.value.trim();
-  const url = urlInput.value.trim();
-
-  if (!name || !/^https?:\/\//i.test(url)) {
-    urlInput.focus();
-    return;
-  }
-
-  try {
-    const endpoint = type === "team" ? "team-image" : "player-image";
-    const res = await fetch(`http://127.0.0.1:5001/${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [type]: name, url })
-    });
-
-    if (!res.ok) throw new Error("Image save failed");
-    urlInput.value = "";
-    await fetchScore();
-  } catch (error) {
-    console.log("PLAYER IMAGE ERROR:", error);
-  }
-});
-
 async function fetchScore() {
   try {
     const res = await fetch("http://127.0.0.1:5001/score");
     const data = await res.json();
     latestScoreData = data;
     applyBattingTheme(data);
+    applyBowlingTheme(data);
 
     // BASIC
     document.getElementById("score").innerText = data.score || "";
@@ -1391,10 +1528,6 @@ async function fetchScore() {
     const bowlingImg = data.bowlingTeamImgCandidates || data.bowlingTeamImg || data.team2ImgCandidates || data.team2Img || (data.team2Fkey ? `https://cricketvectors.akamaized.net/cricketimages/Teams/${data.team2Fkey}.png` : "");
     setImageWithFallback("team1Logo", battingImg, battingTeam, "team");
     setImageWithFallback("team2Logo", bowlingImg, bowlingTeam, "team");
-
-    // TOSS
-    const tossText = shortTossText(data.toss);
-    document.getElementById("toss").innerText = tossText;
 
     // PARTNERSHIP
     document.getElementById("partnership").innerText = partnershipText(data);

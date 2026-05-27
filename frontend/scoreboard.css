@@ -10,6 +10,8 @@
   --team-accent: #00ffff;
   --team-score: #00ff78;
   --team-glow: rgba(244, 160, 32, 0.42);
+  --team-on-primary: #050505;
+  --team-on-accent: #050505;
 }
 
 html {
@@ -124,71 +126,6 @@ body {
   border-color: #00ff00;
 }
 
-.image-override-form {
-  position: fixed;
-  top: 14px;
-  left: 14px;
-  z-index: 20;
-  display: grid;
-  grid-template-columns: auto minmax(78px, 92px) minmax(110px, 150px) minmax(150px, 240px) auto;
-  gap: 6px;
-  width: min(680px, calc(100vw - 130px));
-  padding: 6px;
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  touch-action: none;
-  user-select: none;
-}
-
-.image-override-form.dragging {
-  opacity: 0.92;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-}
-
-.image-form-handle {
-  height: 30px;
-  display: grid;
-  place-items: center;
-  padding: 0 9px;
-  border-radius: 4px;
-  background: rgba(244, 160, 32, 0.95);
-  color: #090909;
-  font-family: Arial, sans-serif;
-  font-size: 11px;
-  font-weight: 900;
-  cursor: move;
-  touch-action: none;
-}
-
-.image-override-form input,
-.image-override-form select,
-.image-override-form button {
-  min-width: 0;
-  height: 30px;
-  border-radius: 4px;
-  font-family: Arial, sans-serif;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.image-override-form input,
-.image-override-form select {
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.92);
-  color: #111;
-  padding: 0 8px;
-  user-select: text;
-}
-
-.image-override-form button {
-  border: 1px solid rgba(244, 160, 32, 0.9);
-  background: #f4a020;
-  color: #090909;
-  padding: 0 10px;
-  cursor: pointer;
-}
-
 .event-overlay {
   position: fixed;
   inset: 0;
@@ -225,6 +162,15 @@ body {
   text-shadow:
     0 8px 26px rgba(255, 45, 85, 0.75),
     0 0 42px rgba(255, 255, 255, 0.5);
+}
+
+.event-overlay.event-lbwcheck,
+.event-overlay.event-runoutcheck,
+.event-overlay.event-drs {
+  color: #ffe66d;
+  text-shadow:
+    0 8px 26px rgba(0, 0, 0, 0.86),
+    0 0 34px rgba(255, 230, 109, 0.66);
 }
 
 .event-overlay.event-wide {
@@ -279,6 +225,16 @@ body {
 
 .moment-panel.partnership {
   border-color: var(--team-accent);
+}
+
+.moment-panel.review {
+  border-color: #ffe66d;
+  background:
+    linear-gradient(135deg, rgba(22, 20, 8, 0.96), rgba(4, 8, 12, 0.94));
+}
+
+.moment-panel.review span {
+  color: #fff7b0;
 }
 
 .match-end-overlay {
@@ -387,6 +343,12 @@ body {
 
 .scoreboard.event-runout {
   animation: score-flash-runout 1.15s ease;
+}
+
+.scoreboard.event-lbwcheck,
+.scoreboard.event-runoutcheck,
+.scoreboard.event-drs {
+  animation: score-flash-review 1.2s ease;
 }
 
 .scoreboard.event-wide {
@@ -544,15 +506,16 @@ body {
 }
 
 .bowling-text {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-primary) 82%, white);
   font-size: clamp(20px, 3.8vh, 30px);
   font-weight: bold;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.86);
 }
 
 /* Stats Bar */
 .stats-bar {
   display: grid;
-  grid-template-columns: minmax(58px, 0.35fr) minmax(350px, 2.5fr) minmax(150px, 0.9fr) minmax(90px, 0.55fr) minmax(190px, 1.2fr);
+  grid-template-columns: minmax(58px, 0.45fr) minmax(350px, 2.7fr) minmax(150px, 1fr) minmax(110px, 0.75fr);
   gap: 7px;
   align-items: center;
   background:
@@ -577,11 +540,15 @@ body {
 }
 
 .stat-label {
-  color: var(--team-primary);
+  width: fit-content;
+  color: var(--team-on-accent);
+  background: color-mix(in srgb, var(--team-accent) 88%, white);
   font-family: Arial, sans-serif;
   font-size: 10px;
   font-weight: 900;
   line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
   text-transform: uppercase;
 }
 
@@ -594,6 +561,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.88);
 }
 
 #target {
@@ -638,10 +606,14 @@ body {
 
 .equation-card span,
 .pressure-card span {
-  color: var(--team-primary);
+  width: fit-content;
+  color: var(--team-on-accent);
+  background: color-mix(in srgb, var(--team-accent) 88%, white);
   font-size: 10px;
   font-weight: 900;
   line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
 }
 
 .equation-card strong,
@@ -654,6 +626,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.88);
 }
 
 .pressure-low strong,
@@ -705,22 +678,6 @@ body {
   border-radius: inherit;
   background: linear-gradient(90deg, var(--team-primary), var(--team-accent));
   transition: width 0.55s ease;
-}
-
-.toss-info {
-  color: var(--team-primary);
-  font-size: clamp(11px, 1.85vh, 15px);
-  font-weight: 900;
-  line-height: 1.08;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toss-info span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .venue-bar {
@@ -927,9 +884,9 @@ body {
 
 .squad-title {
   justify-self: center;
-  color: var(--team-primary);
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid color-mix(in srgb, var(--team-primary) 48%, transparent);
+  color: var(--team-on-accent);
+  background: color-mix(in srgb, var(--team-accent) 88%, white);
+  border: 1px solid color-mix(in srgb, var(--team-accent) 48%, transparent);
   border-radius: 5px;
   padding: 4px 12px;
   font-size: clamp(12px, 2vh, 16px);
@@ -977,7 +934,7 @@ body {
 }
 
 .squad-player span {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
   font-family: Arial, sans-serif;
   font-size: 9px;
   font-weight: 900;
@@ -1038,9 +995,10 @@ body {
 }
 
 .engagement-title span {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
   font-size: clamp(15px, 2.6vh, 24px);
   font-weight: 900;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.88);
 }
 
 .engagement-title strong {
@@ -1097,7 +1055,7 @@ body {
 }
 
 .engagement-player-tile span {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
   font-family: Arial, sans-serif;
   font-size: 9px;
   font-weight: 900;
@@ -1123,7 +1081,7 @@ body {
 }
 
 .engagement-card span {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
   font-family: Arial, sans-serif;
   font-size: 10px;
   font-weight: 900;
@@ -1158,7 +1116,7 @@ body {
 }
 
 .engagement-over span {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
   font-size: 12px;
   font-weight: 900;
 }
@@ -1238,19 +1196,41 @@ body {
 
 .batter-card.is-striker .strike-state-badge {
   background: var(--team-primary);
-  color: white;
+  color: var(--team-on-primary);
   animation: striker-pulse 0.9s ease-in-out infinite alternate;
 }
 
 .batter-card.is-non-striker .strike-state-badge {
   background: rgba(255, 255, 255, 0.2);
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
 }
 
 .bowler-card {
+  --bowler-team-primary: var(--team-primary);
+  --bowler-team-secondary: var(--team-secondary);
+  --bowler-team-accent: var(--team-accent);
+  --bowler-team-score: var(--team-score);
+  --bowler-team-glow: var(--team-glow);
+  --bowler-team-on-primary: var(--team-on-primary);
+  --bowler-team-on-accent: var(--team-on-accent);
   background:
-    linear-gradient(90deg, var(--team-accent) 0 5px, transparent 5px),
-    linear-gradient(135deg, rgba(90, 22, 42, 0.76), rgba(22, 10, 18, 0.72));
+    linear-gradient(90deg, var(--bowler-team-primary) 0 12px, var(--bowler-team-accent) 12px 18px, transparent 18px),
+    linear-gradient(180deg, color-mix(in srgb, var(--bowler-team-accent) 42%, transparent) 0 4px, transparent 4px),
+    radial-gradient(circle at 20% 4%, color-mix(in srgb, var(--bowler-team-accent) 54%, transparent), transparent 36%),
+    linear-gradient(135deg, color-mix(in srgb, var(--bowler-team-primary) 52%, #101010), color-mix(in srgb, var(--bowler-team-secondary) 78%, #030303));
+  border-color: color-mix(in srgb, var(--bowler-team-accent) 72%, rgba(255, 255, 255, 0.18));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--bowler-team-accent) 36%, transparent),
+    inset 18px 0 0 color-mix(in srgb, var(--bowler-team-primary) 82%, #000),
+    0 0 22px var(--bowler-team-glow),
+    0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.bowler-card .player-image {
+  border-color: var(--bowler-team-accent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--bowler-team-primary) 70%, transparent),
+    0 10px 24px rgba(0, 0, 0, 0.25);
 }
 
 .player-image {
@@ -1274,7 +1254,7 @@ body {
 }
 
 .bowler-avatar {
-  background: linear-gradient(to bottom, #008000, #ce1126);
+  background: linear-gradient(to bottom, var(--bowler-team-primary), var(--bowler-team-secondary));
 }
 
 .player-info {
@@ -1295,13 +1275,15 @@ body {
   border-radius: 3px;
   font-size: 11px;
   font-weight: bold;
-  color: black;
+  color: var(--team-on-primary);
   width: fit-content;
   line-height: 1.2;
 }
 
 .bowler-role {
-  background: #f4a020;
+  background: linear-gradient(90deg, var(--bowler-team-accent), color-mix(in srgb, var(--bowler-team-primary) 82%, white));
+  color: var(--bowler-team-on-accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--bowler-team-accent) 44%, transparent);
 }
 
 .mini-flag {
@@ -1341,7 +1323,8 @@ body {
 }
 
 .bowler-score {
-  color: #00ff00;
+  color: var(--bowler-team-score);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--bowler-team-score) 54%, transparent);
 }
 
 .score-main {
@@ -1353,7 +1336,21 @@ body {
 }
 
 .bowler-score .score-main {
-  color: #00ff00;
+  color: var(--bowler-team-score);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--bowler-team-score) 60%, transparent);
+}
+
+.bowler-card .score-stat small {
+  width: fit-content;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--bowler-team-accent);
+  color: var(--bowler-team-on-accent);
+}
+
+.bowler-card .score-stat {
+  border-color: color-mix(in srgb, var(--bowler-team-accent) 44%, rgba(255, 255, 255, 0.16));
+  background: color-mix(in srgb, var(--bowler-team-primary) 22%, rgba(255, 255, 255, 0.08));
 }
 
 .score-stats {
@@ -1372,7 +1369,7 @@ body {
 }
 
 .score-stat small {
-  color: var(--team-primary);
+  color: color-mix(in srgb, var(--team-accent) 88%, white);
   font-family: Arial, sans-serif;
   font-size: 9px;
   font-weight: 900;
@@ -1400,16 +1397,17 @@ body {
 }
 
 .bowler-stats {
-  background: #3d0a19;
-  color: var(--team-accent);
+  background: color-mix(in srgb, var(--bowler-team-secondary) 82%, rgba(0, 0, 0, 0.28));
+  color: var(--bowler-team-accent);
 }
 
 .player-list {
   display: flex;
   gap: 8px;
-  padding: 0 10px 6px;
+  padding: 2px 10px 8px;
   justify-content: center;
   flex-wrap: wrap;
+  overflow: visible;
 }
 
 .player-list-item {
@@ -1429,14 +1427,17 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center top;
+  background: rgba(255, 255, 255, 0.1);
   border: 2px solid var(--team-primary);
+  flex: 0 0 auto;
 }
 
 .player-list-role {
   flex: 0 0 auto;
   background: var(--team-primary);
-  color: black;
+  color: var(--team-on-primary);
   font-size: 11px;
   font-weight: bold;
   padding: 3px 5px;
@@ -1496,16 +1497,22 @@ body {
 }
 
 .ticker-label {
-  color: var(--team-primary);
+  width: fit-content;
+  color: var(--team-on-accent);
+  background: color-mix(in srgb, var(--team-accent) 88%, white);
   font-size: 10px;
   font-weight: bold;
   line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  text-shadow: none;
 }
 
 .ticker-value {
   color: white;
   font-size: 13px;
   line-height: 1.15;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -1575,6 +1582,12 @@ body {
   32% { transform: translateX(12px) scale(1.01); }
   50% { transform: translateX(-7px) scale(1.005); }
   70% { transform: translateX(4px) scale(1); }
+}
+
+@keyframes score-flash-review {
+  0%, 100% { filter: none; transform: scale(1); }
+  25% { filter: drop-shadow(0 0 30px #ffe66d); transform: scale(1.012); }
+  55% { filter: drop-shadow(0 0 14px #ffffff); transform: scale(1); }
 }
 
 @keyframes score-flash-wide {
@@ -1675,28 +1688,13 @@ body {
     padding: 5px 8px;
   }
 
-  .image-override-form {
-    top: 8px;
-    left: 8px;
-    grid-template-columns: auto minmax(68px, 78px) minmax(82px, 120px) minmax(120px, 1fr) auto;
-    width: min(570px, calc(100vw - 92px));
-    padding: 4px;
-  }
-
-  .image-override-form input,
-  .image-override-form select,
-  .image-form-handle,
-  .image-override-form button {
-    height: 25px;
-    font-size: 10px;
-  }
-
   .player-list {
     display: flex;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    overflow: hidden;
-    padding-block: 3px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-block: 4px;
   }
 
   .player-list-item {
@@ -1718,7 +1716,7 @@ body {
   }
 
   .stats-bar {
-    grid-template-columns: minmax(52px, 0.35fr) minmax(280px, 2.15fr) minmax(120px, 0.85fr) minmax(78px, 0.55fr) minmax(160px, 1.1fr);
+    grid-template-columns: minmax(52px, 0.45fr) minmax(280px, 2.3fr) minmax(120px, 0.95fr) minmax(78px, 0.65fr);
     gap: 5px;
     padding: 4px 7px;
   }
@@ -1733,8 +1731,7 @@ body {
   }
 
   .stat-value,
-  #target,
-  .toss-info {
+  #target {
     font-size: 11px;
   }
 
@@ -1767,18 +1764,6 @@ body {
     padding: 4px;
   }
 
-  .image-override-form {
-    position: fixed;
-    top: 8px;
-    left: 8px;
-    grid-template-columns: auto minmax(66px, 78px) minmax(92px, 1fr) auto;
-    width: min(520px, calc(100vw - 16px));
-  }
-
-  .image-override-form input[type="url"] {
-    grid-column: 2 / -1;
-  }
-
   .scoreboard {
     height: calc(100vh - 8px);
   }
@@ -1792,10 +1777,6 @@ body {
   .stat-item {
     min-height: 34px;
     padding: 5px 6px;
-  }
-
-  .toss-info {
-    grid-column: 1 / -1;
   }
 
   .stat-item:nth-child(2) {
@@ -1973,9 +1954,10 @@ body {
   .player-list {
     display: flex;
     flex-wrap: nowrap;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
     justify-content: flex-start;
-    padding: 2px 6px 4px;
+    padding: 4px 6px 6px;
   }
 
   .player-list-item {

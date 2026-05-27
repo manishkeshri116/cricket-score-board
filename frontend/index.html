@@ -9,16 +9,6 @@
 <body>
   <div class="scoreboard" id="box">
     <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false">Sound</button>
-    <form class="image-override-form" id="imageOverrideForm" autocomplete="off">
-      <div class="image-form-handle" id="imageFormHandle" title="Drag">IMAGE</div>
-      <select id="imageOverrideType" aria-label="Image type">
-        <option value="player">Player</option>
-        <option value="team">Team</option>
-      </select>
-      <input id="imageOverrideName" type="text" placeholder="Name / fkey" aria-label="Name or fkey">
-      <input id="imageOverrideUrl" type="url" placeholder="Image URL" aria-label="Image URL">
-      <button type="submit">Set</button>
-    </form>
     <div class="event-overlay" id="eventOverlay" aria-live="polite"></div>
     <div class="moment-overlay" id="momentOverlay" aria-live="polite"></div>
     <div class="match-end-overlay" id="matchEndOverlay" aria-live="polite"></div>
@@ -70,9 +60,6 @@
         <span class="stat-value" id="partnership">3(3)</span>
       </div>
 
-      <div class="stat-item toss-info">
-        <span id="toss"></span>
-      </div>
     </div>
 
     <div class="broadcast-strip" id="broadcastStrip">
